@@ -1,0 +1,45 @@
+name: Construire l'app iPhone
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer XcodeGen
+        run: brew install xcodegen
+
+      - name: Générer le projet Xcode
+        run: xcodegen generate
+
+      - name: Compiler l'app (sans signature)
+        run: |
+          xcodebuild clean build \
+            -project StandBy.xcodeproj \
+            -target StandBy \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Créer le fichier .ipa
+        run: |
+          mkdir -p Payload
+          cp -r build/Release-iphoneos/StandBy.app Payload/
+          zip -r StandBy.ipa Payload
+
+      - name: Mettre le .ipa à disposition
+        uses: actions/upload-artifact@v4
+        with:
+          name: StandBy-ipa
+          path: StandBy.ipa
+          retention-days: 7
